@@ -1,5 +1,5 @@
-import styled from "styled-components";
-import { theme } from '../styles/theme';
+import styled from 'styled-components';
+import { theme } from '../styles/theme.js';
 
 const CardContainer = styled.div`
   background-color: var(--white);
@@ -8,7 +8,7 @@ const CardContainer = styled.div`
   box-shadow: ${theme.shadows.md};
   transition: all ${theme.transitions.normal};
   cursor: pointer;
-  animation: fadeIn 0.4 ease;
+  animation: fadeIn 0.4s ease;
 
   &:hover {
     transform: translateY(-4px);
@@ -89,10 +89,20 @@ const MembersText = styled.p`
   }
 `;
 
-const DownloadButton = styled.button`
-  width: 100%;
+const ButtonContainer = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  margin-top: ${theme.spacing.md};
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const Button = styled.button`
+  flex: 1;
   padding: 1rem;
-  background-color: var(--success-green);
+  background-color: ${props => props.isPrimary ? 'var(--success-green)' : 'var(--accent-blue)'};
   color: var(--white);
   border: none;
   border-radius: ${theme.borderRadius.md};
@@ -110,19 +120,28 @@ const DownloadButton = styled.button`
     transform: translateY(0);
   }
 
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   @media (max-width: 768px) {
     font-size: 2.5vw;
     padding: 0.8rem;
   }
 `;
 
-export const DayCard = ({ date, members, onDownload }) => {
-  const formattedDate = new Date(date).toLocaleDateString('pt-BR', {
+export const DayCard = ({ diario, onViewDetails, onDownloadPDF, isLoading }) => {
+  const formattedDate = new Date(diario.data).toLocaleDateString('pt-BR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+
+  const successRate = diario.tentativas > 0
+    ? ((diario.acertos / diario.tentativas) * 100).toFixed(2)
+    : 0;
 
   return (
     <CardContainer>
@@ -136,12 +155,22 @@ export const DayCard = ({ date, members, onDownload }) => {
 
       <Members>
         <MembersLabel>👥 Integrantes Presentes</MembersLabel>
-        <MembersText>{members}</MembersText>
+        <MembersText>{diario.integrantes}</MembersText>
       </Members>
 
-      <DownloadButton onClick={onDownload}>
-        📥 Baixar Resumo em PDF
-      </DownloadButton>
+      <Members style={{ marginTop: '1rem', borderLeftColor: 'var(--accent-blue)' }}>
+        <MembersLabel>📊 Taxa de Sucesso</MembersLabel>
+        <MembersText>{successRate}%</MembersText>
+      </Members>
+
+      <ButtonContainer>
+        <Button onClick={() => onViewDetails(diario.id)} disabled={isLoading}>
+          👁️ Ver Detalhes
+        </Button>
+        <Button isPrimary={true} onClick={() => onDownloadPDF(diario)} disabled={isLoading}>
+          📥 Baixar PDF
+        </Button>
+      </ButtonContainer>
     </CardContainer>
-  )
-}
+  );
+};

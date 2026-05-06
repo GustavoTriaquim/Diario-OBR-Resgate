@@ -1,8 +1,11 @@
-import styled from "styled-components";
-import { useState } from "react";
-import { Header } from '../components/Header';
-import { DayCard } from '../components/DayCard';
-import { theme } from '../styles/theme';
+import styled from 'styled-components';
+import { useState, useEffect } from 'react';
+import { Header } from '../components/Header.js';
+import { DayCard } from '../components/DayCard.js';
+import { DiarioDetails } from '../components/DiarioDetails.js';
+import { theme } from '../styles/theme.js';
+import { fetchAllDiarios, fetchDiarioById } from '../services/diarioService.js';
+import { generatePDFFromDiario } from '../utils/pdfGenerator.js';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -35,7 +38,7 @@ const SectionTitle = styled.h2`
 
 const GridContainer = styled.div`
   display: grid;
-  grid-template-columns: reapeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: ${theme.spacing.lg};
   margin-bottom: ${theme.spacing.xl};
 
@@ -68,53 +71,171 @@ const EmptyText = styled.p`
   }
 `;
 
-const mockDays = [
-  {
-    id: 1,
-    date: '2026-05-01',
-    members: 'João, Maria, Pedro, Ana',
-  },
-  {
-    id: 2,
-    date: '2026-05-02',
-    members: 'João, Maria, Carlos',
-  },
-  {
-    id: 3,
-    date: '2026-04-30',
-    members: 'Maria, Pedro, Ana, Lucas',
-  },
-];
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: ${theme.spacing.xxl};
+  font-size: 1.2vw;
+  color: var(--accent-blue);
+
+  @media (max-width: 768px) {
+    font-size: 3vw;
+  }
+`;
+
+const FilterContainer = styled.div`
+  display: flex;
+  gap: ${theme.spacing.md};
+  margin-bottom: ${theme.spacing.xl};
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const FilterInput = styled.input`
+  flex: 1;
+  padding: ${theme.spacing.sm};
+  border: 2px solid var(--light-blue);
+  border-radius: ${theme.borderRadius.sm};
+  font-size: 1vw;
+  transition: ${theme.transitions.normal};
+
+  &:focus {
+    border-color: var(--accent-blue);
+    outline: none;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 2.5vw;
+  }
+`;
+
+const ErrorMessage = styled.div`
+  background-color: #ffebee;
+  color: var(--error-red);
+  padding: ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.sm};
+  margin-bottom: ${theme.spacing.lg};
+  border-left: 4px solid var(--error-red);
+  font-size: 1vw;
+
+  @media (max-width: 768px) {
+    font-size: 2.5vw;
+  }
+`;
 
 export default function Home() {
-  const [days] = useState(mockDays);
+  const [diarios, setDiarios] = useState([]);
+  const [filteredDiarios, setFilteredDiarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedDiario, setSelectedDiario] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  const handleDownloadPDF = (dayId, date) => {
-    alert(`Download do PDF para o dia ${date}.`);
+  useEffect(() => {
+    const loadDiarios = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchAllDiarios();
+        setDiarios(data);
+        setFilteredDiarios(data);
+      } catch (err) {
+        setError('Erro ao carregar os diários. Verifique sua conexão com Firebase.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDiarios();
+  }, []);
+
+  useEffect(() => {
+    const filtered = diarios.filter(diario => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        diario.integrantes.toLowerCase().includes(searchLower) ||
+        diario.objetivo.toLowerCase().includes(searchLower) ||
+        new Date(diario.data).toLocaleDateString('pt-BR').includes(searchTerm)
+      );
+    });
+    setFilteredDiarios(filtered);
+  }, [searchTerm, diarios]);
+
+  const handleViewDetails = async (diarioId) => {
+    try {
+      const diario = await fetchDiarioById(diarioId);
+      setSelectedDiario(diario);
+    } catch (err) {
+      setError('Erro ao carregar detalhes do diário.');
+      console.error(err);
+    }
+  };
+
+  const handleDownloadPDF = async (diario) => {
+    try {
+      setIsGeneratingPDF(true);
+      await generatePDFFromDiario(diario);
+    } catch (err) {
+      setError('Erro ao gerar PDF. Tente novamente.');
+      console.error(err);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   return (
     <Container>
       <Header />
       <ContentWrapper>
-        <SectionTitle>📋 Selecione um Dia</SectionTitle>
+        {error && <ErrorMessage>{error}</ErrorMessage>}
 
-        {days.length > 0 ? (
+        <SectionTitle>📋 Diários de Bordo</SectionTitle>
+
+        <FilterContainer>
+          <FilterInput
+            type="text"
+            placeholder="🔍 Buscar por integrantes, objetivo ou data..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </FilterContainer>
+
+        {loading ? (
+          <LoadingContainer>
+            ⏳ Carregando diários...
+          </LoadingContainer>
+        ) : filteredDiarios.length > 0 ? (
           <GridContainer>
-            {days.map((day) => (
+            {filteredDiarios.map((diario) => (
               <DayCard
-                key={day.id}
-                date={day.date}
-                members={day.members}
-                onDownload={() => handleDownloadPDF(day.id, day.date)}
+                key={diario.id}
+                diario={diario}
+                onViewDetails={handleViewDetails}
+                onDownloadPDF={handleDownloadPDF}
+                isLoading={isGeneratingPDF}
               />
             ))}
           </GridContainer>
         ) : (
           <EmptyState>
             <EmptyIcon>📭</EmptyIcon>
-            <EmptyText>Nenhum diário preenchido ainda.</EmptyText>
+            <EmptyText>
+              {searchTerm ? 'Nenhum diário encontrado com essa busca.' : 'Nenhum diário preenchido ainda.'}
+            </EmptyText>
           </EmptyState>
+        )}
+
+        {selectedDiario && (
+          <DiarioDetails
+            diario={selectedDiario}
+            onClose={() => setSelectedDiario(null)}
+          />
         )}
       </ContentWrapper>
     </Container>
