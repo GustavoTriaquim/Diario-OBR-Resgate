@@ -1,176 +1,33 @@
 import styled from 'styled-components';
 import { theme } from '../styles/theme.js';
 
-const CardContainer = styled.div`
-  background-color: var(--white);
-  padding: ${theme.spacing.lg};
-  border-radius: ${theme.borderRadius.lg};
-  box-shadow: ${theme.shadows.md};
-  transition: all ${theme.transitions.normal};
-  cursor: pointer;
-  animation: fadeIn 0.4s ease;
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: ${theme.shadows.lg};
-  }
-
-  @media (max-width: 768px) {
-    padding: ${theme.spacing.md};
-  }
-`;
-
-const DateDisplay = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${theme.spacing.md};
-  margin-bottom: ${theme.spacing.md};
-`;
-
-const DateIcon = styled.span`
-  font-size: 2rem;
-`;
-
-const DateInfo = styled.div`
-  flex: 1;
-`;
-
-const DateLabel = styled.p`
-  color: var(--text-light);
-  font-size: 0.9vw;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  @media (max-width: 768px) {
-    font-size: 2.5vw;
-  }
-`;
-
-const DateValue = styled.h3`
-  color: var(--primary-blue);
-  font-size: 1.8vw;
-  margin: 0.25rem 0 0 0;
-  font-weight: 700;
-
-  @media (max-width: 768px) {
-    font-size: 4vw;
-  }
-`;
-
-const Members = styled.div`
-  margin: ${theme.spacing.md} 0;
+const Card = styled.div`
+  background: var(--white);
   padding: ${theme.spacing.md};
-  background-color: var(--gray);
-  border-radius: ${theme.borderRadius.sm};
-  border-left: 4px solid var(--accent-blue);
+  border-radius: ${theme.spacing.md};
+  box-shadow: ${theme.shadows.sm};
+  border-left: 10px solid ${p => p.mod === 'artistica' ? 'var(--info-yellow)' : 'var(--error-red)'};
+  `;
+
+const Badge = styled.div`
+  display: inline-block;
+  padding: 0.25rem ${theme.spacing.xs};
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: ${theme.spacing.xs};
+  background: ${p => p.mod === 'artistica' ? '#fefcbf' : '#fed7d7'};
+  color: ${p => p.mod === 'artistica' ? '#744210' : '#822727'};
 `;
 
-const MembersLabel = styled.p`
-  color: var(--text-light);
-  font-size: 0.85vw;
-  margin: 0 0 0.5rem 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  @media (max-width: 768px) {
-    font-size: 2vw;
-  }
-`;
-
-const MembersText = styled.p`
-  color: var(--primary-blue);
-  font-size: 1vw;
-  margin: 0;
-  font-weight: 600;
-
-  @media (max-width: 768px) {
-    font-size: 2.5vw;
-  }
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  gap: ${theme.spacing.sm};
-  margin-top: ${theme.spacing.md};
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-`;
-
-const Button = styled.button`
-  flex: 1;
-  padding: 1rem;
-  background-color: ${props => props.isPrimary ? 'var(--success-green)' : 'var(--accent-blue)'};
-  color: var(--white);
-  border: none;
-  border-radius: ${theme.borderRadius.md};
-  font-size: 1.1vw;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all ${theme.transitions.normal};
-
-  &:hover {
-    opacity: 0.9;
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 2.5vw;
-    padding: 0.8rem;
-  }
-`;
-
-export const DayCard = ({ diario, onViewDetails, onDownloadPDF, isLoading }) => {
-  const formattedDate = new Date(diario.data).toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  const successRate = diario.tentativas > 0
-    ? ((diario.acertos / diario.tentativas) * 100).toFixed(2)
-    : 0;
-
-  return (
-    <CardContainer>
-      <DateDisplay>
-        <DateIcon>📅</DateIcon>
-        <DateInfo>
-          <DateLabel>Data do Diário</DateLabel>
-          <DateValue>{formattedDate}</DateValue>
-        </DateInfo>
-      </DateDisplay>
-
-      <Members>
-        <MembersLabel>👥 Integrantes Presentes</MembersLabel>
-        <MembersText>{diario.integrantes}</MembersText>
-      </Members>
-
-      <Members style={{ marginTop: '1rem', borderLeftColor: 'var(--accent-blue)' }}>
-        <MembersLabel>📊 Taxa de Sucesso</MembersLabel>
-        <MembersText>{successRate}%</MembersText>
-      </Members>
-
-      <ButtonContainer>
-        <Button onClick={() => onViewDetails(diario.id)} disabled={isLoading}>
-          👁️ Ver Detalhes
-        </Button>
-        <Button isPrimary={true} onClick={() => onDownloadPDF(diario)} disabled={isLoading}>
-          📥 Baixar PDF
-        </Button>
-      </ButtonContainer>
-    </CardContainer>
-  );
+export const DayCard = ({ diario, onOpen, onPDF }) => {
+  <Card mod={diario.modalidade}>
+    <Badge mod={diario.modalidade}>{diario.modalidade.toUpperCase()}</Badge>
+    <h3 style={{ margin: '0 0 10px 0'}}>📅 {new Date(diario.data).toLocaleDateString('pt-BR')}</h3>
+    <p style={{ fontSize: '14px', color: 'var(--text-light)'}}>👥 {diario.integrantes}</p>
+    <p style={{ fontSize: '14px', color: 'var(--text-light)'}}>📊 Taxa: <strong>{diario.taxa}</strong></p>
+    <div style={{ display: 'flex', gap: '${theme.spacing.xs}', marginTop: '${theme.spacing.sm}'}}>
+      
+    </div>
+  </Card>
 };
